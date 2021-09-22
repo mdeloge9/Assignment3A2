@@ -65,5 +65,102 @@ nhoods <- nhoods %>%
   st_transform(MA_state_plane)
 ```
 
+```{r}
+ggplot() +
+  geom_sf(data = nhoods, fill = "green", color = NA) + 
+  geom_sf(data = EV, color = "red", size = 0.01) +
+  geom_sf(data = centers, color = "blue", size = 0.01) +
+  geom_sf(data = main, fill = NA, color = "orange") +
+  theme_map() +
+  annotation_scale()
+```
+```{r}
+centers_buffer <- st_buffer(centers, dist = 500) %>%
+  st_union()
+
+ggplot(centers_buffer) +
+  geom_sf() +
+  theme_map()
+```
+
+```{r}
+EV_centers <- EV[centers_buffer,]
+  
+ggplot(centers_buffer) +
+  geom_sf() +
+  geom_sf(data = EV_centers, 
+          color = "darkblue", 
+          size = 0.01) +
+  theme_map()
+```
+```{r}
+EV <- EV %>%
+  st_join(EV_centers) %>%
+  mutate(by_centers = !is.na(Name.y))
+```
+```{r}
+n_EV_centers <- sum(EV$by_centers)
+
+n_EV_centers
+```
+```{r}
+n_EV <- length(EV$by_centers)
+
+pct_EV_centers <- n_EV_centers / n_EV
+
+pct_EV_centers
+```
+5. Number and Proportion of EV Charging Stations within 500m of a Community Center
+```{r}
+left_side  <- st_bbox(main)$xmin
+top_side <- st_bbox(main)$ymax
+
+ggplot() +
+   geom_sf(data = nhoods, fill = "powderblue", color = NA) + 
+
+  geom_sf(data = EV, size = 0.025,
+          aes(color = by_centers)) +
+  scale_color_manual(values = c("firebrick", "blue4"),
+          name = "EV Charging Stations\nby distance to a community center", 
+          labels = c("No charging station within 500 m",
+                     "Charging station within 500 m")) +
+  annotation_scale(location = "br") +
+  annotation_north_arrow(location = "tr",
+                         style = north_arrow_minimal()) +
+  annotate(geom = "text", x = left_side, 
+           y = top_side, 
+           label = paste("Of the ", 
+                         prettyNum(n_EV, big.mark = ","),
+                         " EV charging stations in Boston,\n", 
+                         prettyNum(n_EV_centers, big.mark = ","),
+                         " (", 
+                         prettyNum(100*pct_EV_centers, digits = 0),
+                         "%) are within 500 meters of a community center.",
+                         sep = ""),
+           hjust = 0, vjust = 0, size = 3) +
+  theme_map() +
+  theme(panel.background = element_rect(fill = "aliceblue"),
+        legend.background = element_rect(fill = alpha("plum2", 0.5), 
+                                         color = "blueviolet"))
+```
+6. Boston Neighborhoods by Number of EV Charging Stations
+```{r}
+left_side  <- st_bbox(main)$xmin
+top_side <- st_bbox(main)$ymax
+
+ggplot(nhoods) +
+  geom_sf(color = NA, 
+          aes(fill = num_EV)) +
+  scale_fill_viridis_c(name = "Neighborhoods by number\nof charging stations",
+                       breaks = breaks <- seq(0, 20, by = 2),
+                       labels = paste(prettyNum(breaks, big.mark = ","),
+                                      "charging stations")) +
+  annotation_scale(location = "br") +
+  annotation_north_arrow(location = "tr",
+                         style = north_arrow_minimal()) +
+
+theme_map() +
+  theme(legend.position = "right", legend.background = element_rect(fill = alpha("plum2", 0.1), 
+                                         color = "blueviolet"))
 ```
 
